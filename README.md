@@ -37,12 +37,14 @@ LINE Desktop MCP 是一個基於 Model Context Protocol 的整合工具，讓 AI
 
 - 📖 讀取 LINE 聊天訊息
 - ✉️ 發送 LINE 訊息（手動或自動）
+- 💾 儲存聊天記錄至本地檔案
 - 🤖 將 LINE 整合到您的 AI 工作流程中
 
 ### 功能特色
 
 - 🤖 **AI 整合**：透過 MCP 協議與 Claude Desktop、 n8n 等 AI 工具無縫整合
 - 💬 **訊息操作**：支援讀取和發送 LINE 訊息
+- 💾 **聊天記錄儲存**：將聊天記錄匯出為本地 .txt 檔案，方便備份與分析
 - 🖥️ **桌面整合**：直接與 LINE Desktop 應用程式互動
 - 🔄 **自動化支援**：可選擇手動確認或自動發送訊息
 
@@ -179,6 +181,14 @@ Claude 會先撰寫訊息內容，等待您確認後再發送。
 
 Claude 會撰寫訊息並自動完成發送動作。
 
+#### 4. 儲存聊天記錄
+
+```
+請幫我儲存 LINE 群組『專案討論』的聊天記錄
+```
+
+Claude 會捲動載入歷史訊息，複製聊天內容並儲存為 `.txt` 檔案。可指定儲存路徑和往上捲動次數（載入更多歷史）。
+
 ### 使用注意事項
 
 #### 重要提醒
@@ -237,12 +247,14 @@ LINE Desktop MCP is an integration tool based on the Model Context Protocol that
 
 - 📖 Read LINE chat messages
 - ✉️ Send LINE messages (manual or automatic)
+- 💾 Save chat history to local files
 - 🤖 Integrate LINE into your AI workflows
 
 ### Features
 
 - 🤖 **AI Integration**: Seamlessly integrate with AI tools like Claude Desktop, n8n through the MCP protocol
 - 💬 **Message Operations**: Support for reading and sending LINE messages
+- 💾 **Chat History Export**: Export chat history as local .txt files for backup and analysis
 - 🖥️ **Desktop Integration**: Direct interaction with the LINE Desktop application
 - 🔄 **Automation Support**: Choose between manual confirmation or automatic message sending
 
@@ -378,6 +390,14 @@ Please write a greeting and send it to LINE group 'Project Discussion', and send
 ```
 
 Claude will compose the message and automatically complete the sending action.
+
+#### 4. Save Chat History
+
+```
+Please save the chat history from LINE group 'Project Discussion'
+```
+
+Claude will scroll up to load more history, copy the chat content, and save it as a `.txt` file. You can specify the save path and number of page-ups (to load more history).
 
 ### Usage Precautions
 

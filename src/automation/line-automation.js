@@ -87,6 +87,45 @@ export class LineAutomation {
     return await this.automation.sendMessage(chatName, message, autoSend);
   }
 
+  async saveChatHistory(chatName, savePath, pageUpTimes = 10) {
+    await this.automation.switchToEnglish();
+    await this.automation.activateLine();
+    const ok = await this.automation.selectChat(chatName);
+    if (!ok) throw new Error(`Chat "${chatName}" not found`);
+
+    await this.automation.pageUp(pageUpTimes);
+    const chatHistory = await this.automation.copyAllChatToClipboard();
+
+    if (!chatHistory || chatHistory.startsWith('ERROR:')) {
+      throw new Error(`Failed to copy chat history: ${chatHistory}`);
+    }
+
+    // Determine save path
+    if (!savePath) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const safeChatName = chatName.replace(/[<>:"/\\|?*\x00-\x1f\x7f]/g, '_');
+      const logDir = process.env.CHAT_LOG_PATH || path.join(process.cwd(), 'logs');
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+      savePath = path.join(logDir, `${safeChatName}_${timestamp}.txt`);
+    } else {
+      const dir = path.dirname(savePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+
+    fs.writeFileSync(savePath, chatHistory, 'utf-8');
+
+    return {
+      success: true,
+      path: savePath,
+      size: chatHistory.length,
+      lineCount: chatHistory.split('\n').length,
+    };
+  }
+
   async getChatList(includeGroups = true, includeIndividual = true) {
     return await this.automation.getChatList(includeGroups, includeIndividual);
   }

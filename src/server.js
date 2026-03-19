@@ -238,7 +238,7 @@ class LineDesktopMCPServer {
           },
           {
             name: 'send_message_manual',
-            description: 'Send a message to a specific LINE chat or group, with pre-send review in LINE. If the user’s intent to auto-send is unclear, use this function by default',
+            description: 'Send a message to a specific LINE chat or group, with pre-send review in LINE. If the user\'s intent to auto-send is unclear, use this function by default',
             inputSchema: {
               type: 'object',
               properties: {
@@ -271,6 +271,29 @@ class LineDesktopMCPServer {
               },
               required: ['chatName', 'message'],
             },
+          },
+          {
+            name: 'save_chat_history',
+            description: 'Save the chat history of a LINE chat room to a local text file. Scrolls up to load more messages, copies visible content, and writes it to a file.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                chatName: {
+                  type: 'string',
+                  description: 'Name of the chat/group to save history from',
+                },
+                savePath: {
+                  type: 'string',
+                  description: 'Full file path to save the chat history to (default: logs/<chatName>_<timestamp>.txt)',
+                },
+                pageUpTimes: {
+                  type: 'number',
+                  description: 'Number of page-ups to load more history before saving (default: 10)',
+                  default: 10,
+                },
+              },
+              required: ['chatName'],
+            },
           }
         ]
       };
@@ -296,6 +319,9 @@ class LineDesktopMCPServer {
 
           case 'send_message_auto':
             return await this.handleSendMessageAuto(args);
+
+          case 'save_chat_history':
+            return await this.handleSaveChatHistory(args);
 
           default:
             throw new McpError(
@@ -415,9 +441,9 @@ class LineDesktopMCPServer {
 
   async handleSendMessageAuto(args) {
     const { chatName, message } = args;
-    
+
     const result = await this.lineAutomation.sendChatMessage(chatName, message,  true);
-    
+
     return {
       content: [
         {
@@ -428,6 +454,28 @@ class LineDesktopMCPServer {
             message,
             timestamp: new Date().toISOString(),
             error: result.error || null,
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleSaveChatHistory(args) {
+    const { chatName, savePath, pageUpTimes = 10 } = args;
+
+    const result = await this.lineAutomation.saveChatHistory(chatName, savePath, pageUpTimes);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: result.success,
+            chatName,
+            savedTo: result.path,
+            fileSize: result.size,
+            lineCount: result.lineCount,
+            timestamp: new Date().toISOString(),
           }, null, 2),
         },
       ],

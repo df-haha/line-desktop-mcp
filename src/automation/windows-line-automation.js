@@ -405,4 +405,86 @@ ${script}
       return { success: false, error: e.message };
     }
   }
+
+  /**
+   * Save chat history using LINE Desktop's native export function.
+   * Flow: Click ≡ side panel → click "儲存聊天記錄" → handle Save As dialog.
+   * Note: Coordinate positions may need adjustment for different LINE Desktop versions/window sizes.
+   * @param {string} savePath The full file path to save the chat history to.
+   * @returns {Promise<{success: boolean, path?: string, error?: string}>}
+   */
+  async saveChatHistoryViaMenu(savePath) {
+    const escapedPath = savePath.replace(/\\/g, '\\\\').replace(/"/g, '""');
+    const script = `
+      SetTitleMatchMode 3
+      WinActivate "${this.lineWinTitle}"
+      Sleep ${this.delayShort}
+      WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
+      CoordMode "Mouse", "Screen"
+      scale := A_ScreenDPI / 96
+
+      ; Step 1: Click the ≡ (side panel) button at top-right of chat header
+      clickX := winX + winW - 35 * scale
+      clickY := winY + 55 * scale
+      Click clickX, clickY
+      Sleep ${this.delayMidLong}
+
+      ; Step 2: Click "儲存聊天記錄" in the side panel
+      ; Position: near bottom of the side panel list items
+      WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
+      clickX := winX + winW - 120 * scale
+      clickY := winY + winH - 80 * scale
+      Click clickX, clickY
+      Sleep ${this.delayLong}
+
+      ; Step 3: Handle the Save As dialog
+      SetTitleMatchMode 2
+      try {
+        WinWait("另存新檔",, 8)
+      } catch {
+        try {
+          WinWait("Save As",, 3)
+        } catch {
+          FileAppend "ERROR: Save dialog did not appear", "*"
+          ExitApp
+        }
+      }
+
+      WinActivate
+      Sleep ${this.delayShort}
+
+      ; Focus filename field and set the save path
+      Send "!n"
+      Sleep ${this.delayShort}
+      Send "^a"
+      Sleep 100
+      A_Clipboard := "${escapedPath}"
+      Send "^v"
+      Sleep ${this.delayShort}
+
+      ; Click Save
+      Send "!s"
+      Sleep ${this.delayMid}
+
+      ; Handle potential overwrite confirmation dialog
+      try {
+        WinWait("確認",, 2)
+        Send "!y"
+      } catch {
+      }
+
+      Sleep ${this.delayShort}
+      FileAppend "SUCCESS", "*"
+    `;
+
+    try {
+      const result = await this.runAhk(script);
+      if (result.includes('SUCCESS')) {
+        return { success: true, path: savePath };
+      }
+      return { success: false, error: result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
 }
