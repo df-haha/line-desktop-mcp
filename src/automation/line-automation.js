@@ -88,12 +88,15 @@ export class LineAutomation {
   }
 
   async saveChatHistory(chatName, savePath, pageUpTimes = 10) {
+    // Clamp pageUpTimes to prevent excessive key strokes
+    const clampedPageUpTimes = Math.min(Math.max(pageUpTimes, 1), 100);
+
     await this.automation.switchToEnglish();
     await this.automation.activateLine();
     const ok = await this.automation.selectChat(chatName);
     if (!ok) throw new Error(`Chat "${chatName}" not found`);
 
-    await this.automation.pageUp(pageUpTimes);
+    await this.automation.pageUp(clampedPageUpTimes);
     const chatHistory = await this.automation.copyAllChatToClipboard();
 
     if (!chatHistory || chatHistory.startsWith('ERROR:')) {
@@ -101,19 +104,26 @@ export class LineAutomation {
     }
 
     // Determine save path
+    const baseDir = process.env.CHAT_LOG_PATH || path.join(process.cwd(), 'logs');
     if (!savePath) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const safeChatName = chatName.replace(/[<>:"/\\|?*\x00-\x1f\x7f]/g, '_');
-      const logDir = process.env.CHAT_LOG_PATH || path.join(process.cwd(), 'logs');
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
+      if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
       }
-      savePath = path.join(logDir, `${safeChatName}_${timestamp}.txt`);
+      savePath = path.join(baseDir, `${safeChatName}_${timestamp}.txt`);
     } else {
-      const dir = path.dirname(savePath);
+      // Validate savePath is within the allowed base directory to prevent path traversal
+      const resolvedPath = path.resolve(savePath);
+      const resolvedBase = path.resolve(baseDir);
+      if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+        throw new Error(`savePath must be within the allowed directory: ${resolvedBase}`);
+      }
+      const dir = path.dirname(resolvedPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
+      savePath = resolvedPath;
     }
 
     fs.writeFileSync(savePath, chatHistory, 'utf-8');

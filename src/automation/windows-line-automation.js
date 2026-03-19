@@ -410,11 +410,14 @@ ${script}
    * Save chat history using LINE Desktop's native export function.
    * Flow: Click ≡ side panel → click "儲存聊天記錄" → handle Save As dialog.
    * Note: Coordinate positions may need adjustment for different LINE Desktop versions/window sizes.
+   * This method is experimental — not wired to the MCP tool yet. The clipboard-based
+   * saveChatHistory() in line-automation.js is the primary (reliable) approach.
    * @param {string} savePath The full file path to save the chat history to.
    * @returns {Promise<{success: boolean, path?: string, error?: string}>}
    */
   async saveChatHistoryViaMenu(savePath) {
-    const escapedPath = savePath.replace(/\\/g, '\\\\').replace(/"/g, '""');
+    // AHK v2 uses backtick (`) as escape char; escape backslashes and backticks for safe interpolation
+    const escapedPath = savePath.replace(/`/g, '``').replace(/"/g, '`"');
     const script = `
       SetTitleMatchMode 3
       WinActivate "${this.lineWinTitle}"
