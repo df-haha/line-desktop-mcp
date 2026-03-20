@@ -87,21 +87,11 @@ export class LineAutomation {
     return await this.automation.sendMessage(chatName, message, autoSend);
   }
 
-  async saveChatHistory(chatName, savePath, pageUpTimes = 10) {
-    // Clamp pageUpTimes to prevent excessive key strokes
-    const clampedPageUpTimes = Math.min(Math.max(pageUpTimes, 1), 100);
-
+  async saveChatHistory(chatName, savePath) {
     await this.automation.switchToEnglish();
     await this.automation.activateLine();
     const ok = await this.automation.selectChat(chatName);
     if (!ok) throw new Error(`Chat "${chatName}" not found`);
-
-    await this.automation.pageUp(clampedPageUpTimes);
-    const chatHistory = await this.automation.copyAllChatToClipboard();
-
-    if (!chatHistory || chatHistory.startsWith('ERROR:')) {
-      throw new Error(`Failed to copy chat history: ${chatHistory}`);
-    }
 
     // Determine save path
     const baseDir = process.env.CHAT_LOG_PATH || path.join(process.cwd(), 'logs');
@@ -111,7 +101,7 @@ export class LineAutomation {
       if (!fs.existsSync(baseDir)) {
         fs.mkdirSync(baseDir, { recursive: true });
       }
-      savePath = path.join(baseDir, `${safeChatName}_${timestamp}.txt`);
+      savePath = path.join(baseDir, `[LINE]${safeChatName}_${timestamp}.txt`);
     } else {
       // Validate savePath is within the allowed base directory to prevent path traversal
       const resolvedPath = path.resolve(savePath);
@@ -119,20 +109,19 @@ export class LineAutomation {
       if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
         throw new Error(`savePath must be within the allowed directory: ${resolvedBase}`);
       }
-      const dir = path.dirname(resolvedPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
       savePath = resolvedPath;
     }
 
-    fs.writeFileSync(savePath, chatHistory, 'utf-8');
+    // Use LINE Desktop's native export via \u22ee menu \u2192 \u5132\u5b58\u804a\u5929
+    const result = await this.automation.saveChatHistoryViaMenu(savePath);
+
+    if (!result.success) {
+      throw new Error(`Failed to save chat history: ${result.error}`);
+    }
 
     return {
       success: true,
       path: savePath,
-      size: chatHistory.length,
-      lineCount: chatHistory.split('\n').length,
     };
   }
 

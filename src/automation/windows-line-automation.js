@@ -407,16 +407,15 @@ ${script}
   }
 
   /**
-   * Save chat history using LINE Desktop's native export function.
-   * Flow: Click ≡ side panel → click "儲存聊天記錄" → handle Save As dialog.
-   * Note: Coordinate positions may need adjustment for different LINE Desktop versions/window sizes.
-   * This method is experimental — not wired to the MCP tool yet. The clipboard-based
-   * saveChatHistory() in line-automation.js is the primary (reliable) approach.
+   * Save chat history using LINE Desktop's native export via the \u22ee (three-dot) menu.
+   * Flow: Click \u22ee at top-right \u2192 click \"\u5132\u5b58\u804a\u5929\" \u2192 handle Save As dialog with keyboard.
+   * Coordinates are relative to window edges and \u22ee button position, so they work across window sizes.
+   * DPI scaling is handled via A_ScreenDPI / 96.
    * @param {string} savePath The full file path to save the chat history to.
    * @returns {Promise<{success: boolean, path?: string, error?: string}>}
    */
   async saveChatHistoryViaMenu(savePath) {
-    // AHK v2 uses backtick (`) as escape char; escape backslashes and backticks for safe interpolation
+    // AHK v2 uses backtick (`) as escape char
     const escapedPath = savePath.replace(/`/g, '``').replace(/"/g, '`"');
     const script = `
       SetTitleMatchMode 3
@@ -426,24 +425,25 @@ ${script}
       CoordMode "Mouse", "Screen"
       scale := A_ScreenDPI / 96
 
-      ; Step 1: Click the ≡ (side panel) button at top-right of chat header
-      clickX := winX + winW - 35 * scale
-      clickY := winY + 55 * scale
-      Click clickX, clickY
+      ; Step 1: Click the \u22ee (three-dot menu) button at top-right of chat header
+      ; This position is anchored to the right edge of the window — stable across window sizes
+      dotMenuX := winX + winW - 15 * scale
+      dotMenuY := winY + 50 * scale
+      Click dotMenuX, dotMenuY
       Sleep ${this.delayMidLong}
 
-      ; Step 2: Click "儲存聊天記錄" in the side panel
-      ; Position: near bottom of the side panel list items
-      WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
-      clickX := winX + winW - 120 * scale
-      clickY := winY + winH - 80 * scale
-      Click clickX, clickY
+      ; Step 2: Click \"\u5132\u5b58\u804a\u5929\" in the dropdown menu
+      ; Menu items use relative offset from the \u22ee button click position
+      ; \"\u5132\u5b58\u804a\u5929\" is the 8th item; each item is ~28px, menu starts ~20px below \u22ee
+      menuX := dotMenuX - 45 * scale
+      menuY := dotMenuY + 20 * scale + 7.5 * 28 * scale
+      Click menuX, menuY
       Sleep ${this.delayLong}
 
-      ; Step 3: Handle the Save As dialog
+      ; Step 3: Handle the Save As dialog — entirely keyboard-driven, no coordinates
       SetTitleMatchMode 2
       try {
-        WinWait("另存新檔",, 8)
+        WinWait("\u53e6\u5b58\u65b0\u6a94",, 8)
       } catch {
         try {
           WinWait("Save As",, 3)
@@ -456,7 +456,7 @@ ${script}
       WinActivate
       Sleep ${this.delayShort}
 
-      ; Focus filename field and set the save path
+      ; Focus filename field (Alt+N) and set the save path
       Send "!n"
       Sleep ${this.delayShort}
       Send "^a"
@@ -465,13 +465,13 @@ ${script}
       Send "^v"
       Sleep ${this.delayShort}
 
-      ; Click Save
+      ; Click Save (Alt+S)
       Send "!s"
       Sleep ${this.delayMid}
 
       ; Handle potential overwrite confirmation dialog
       try {
-        WinWait("確認",, 2)
+        WinWait("\u78ba\u8a8d",, 2)
         Send "!y"
       } catch {
       }

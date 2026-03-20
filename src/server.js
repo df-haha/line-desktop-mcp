@@ -274,7 +274,7 @@ class LineDesktopMCPServer {
           },
           {
             name: 'save_chat_history',
-            description: 'Save the chat history of a LINE chat room to a local text file. Scrolls up to load more messages, copies visible content, and writes it to a file.',
+            description: 'Save the chat history of a LINE chat room using LINE Desktop native export. Opens the \u22ee menu, clicks \"\u5132\u5b58\u804a\u5929\", and saves via the Save As dialog.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -284,12 +284,7 @@ class LineDesktopMCPServer {
                 },
                 savePath: {
                   type: 'string',
-                  description: 'Full file path to save the chat history to (default: logs/<chatName>_<timestamp>.txt)',
-                },
-                pageUpTimes: {
-                  type: 'number',
-                  description: 'Number of page-ups to load more history before saving (default: 10)',
-                  default: 10,
+                  description: 'Full file path to save the chat history to (default: CHAT_LOG_PATH/[LINE]<chatName>_<timestamp>.txt)',
                 },
               },
               required: ['chatName'],
@@ -461,9 +456,9 @@ class LineDesktopMCPServer {
   }
 
   async handleSaveChatHistory(args) {
-    const { chatName, savePath, pageUpTimes = 10 } = args;
+    const { chatName, savePath } = args;
 
-    const result = await this.lineAutomation.saveChatHistory(chatName, savePath, pageUpTimes);
+    const result = await this.lineAutomation.saveChatHistory(chatName, savePath);
 
     return {
       content: [
@@ -473,8 +468,6 @@ class LineDesktopMCPServer {
             success: result.success,
             chatName,
             savedTo: result.path,
-            fileSize: result.size,
-            lineCount: result.lineCount,
             timestamp: new Date().toISOString(),
           }, null, 2),
         },
