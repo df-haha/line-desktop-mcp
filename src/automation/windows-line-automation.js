@@ -217,18 +217,7 @@ ${script}
   }
   
   async switchToEnglish() {
-    // On Windows, switching input method is complex.
-    // A common method is to cycle with Alt+Shift.
-    // For now, we assume the user has the correct (e.g., English) input method active.
-    // This can be improved later with more advanced techniques if needed.
-    const script = `
-      WinActivate "${this.lineWinTitle}"
-      Sleep ${this.delayShort}
-      Send "!+^" ; Alt+Shift to cycle language (example, might not work for all)
-    `;
-    // We will just log a warning and proceed, as this is not reliable.
     console.warn("Switching to English on Windows is not reliably implemented. Assuming correct input method is active.");
-    // await this.runAhk(script);
     return;
   }
 
@@ -263,11 +252,10 @@ ${script}
         result = await this._sendSingleMessage(chatName, part.trim() );
         result = await this._sendSingleMessage(chatName, 'k');
         result = await this._sendSingleMessageBackspace();
-        //result = await this._sendSingleMessageClickMention();
         result = await this._sendShiftEnter();
         
       } else {
-        const lines = part.split(/\r\n|\n|\r/); // Handles Windows, Unix, and old Mac line endings
+        const lines = part.split(/\r\n|\n|\r/);
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
           if (line) {
@@ -275,7 +263,6 @@ ${script}
           }
 
           if (i < lines.length - 1) {
-            // Not the last line, so press Shift+Enter
             result = await this._sendShiftEnter();
           }
         }
@@ -295,7 +282,7 @@ ${script}
   async _sendShiftEnter() {
     const script = `
       WinActivate "${this.lineWinTitle}"
-      Send "+{Enter}" ; Shift+Enter for newline
+      Send "+{Enter}"
     `;
     try {
       await this.runAhk(script);
@@ -309,9 +296,7 @@ ${script}
     const script = `
       SetTitleMatchMode 3
       WinActivate "${this.lineWinTitle}"
-      ; Get window position and size
       WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
-      ; Click at position (w-20, h/2) within the window
       CoordMode "Mouse", "Screen"
       scale := A_ScreenDPI / 96
       clickX := winX + winW * (3/4)
@@ -380,19 +365,14 @@ ${script}
     const script = `
       SetTitleMatchMode 3
       Sleep ${this.delayLong}
-      ; Get window position and size
       WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
-      ; Click at position (w-20, h/2) within the window
       CoordMode "Mouse", "Screen"
       scale := A_ScreenDPI / 96
       clickX := winX + winW * (3/4)
       clickY := winY + winH - 130 * scale
       Click clickX, clickY
       Sleep ${this.delayShort}
-
-      ; Get window position and size
       WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
-      ; Click at position (w-20, h/2) within the window
       CoordMode "Mouse", "Screen"
       clickX := winX + winW - 20 * scale
       clickY := winY + winH - 50 * scale
@@ -409,7 +389,7 @@ ${script}
   /**
    * Save chat history using LINE Desktop's native export via the \u22ee (three-dot) menu.
    * Flow: Click \u22ee at top-right \u2192 click \"\u5132\u5b58\u804a\u5929\" \u2192 handle Save As dialog with keyboard.
-   * Coordinates are relative to window edges, stable across window sizes.
+   * Coordinates measured from actual LINE window screenshot on 1920x1080 @ 100% DPI.
    * @param {string} savePath The full file path to save the chat history to.
    * @returns {Promise<{success: boolean, path?: string, error?: string}>}
    */
@@ -425,17 +405,17 @@ ${script}
       scale := A_ScreenDPI / 96
 
       ; Step 1: Click the \u22ee (three-dot menu) at top-right of chat header
-      ; Position: anchored to right edge (winW - 18), header Y ~62px from window top
-      dotMenuX := winX + winW - 18 * scale
-      dotMenuY := winY + 62 * scale
+      ; Measured from screenshot: x = winW - 20, y = 52 from window top
+      dotMenuX := winX + winW - 20 * scale
+      dotMenuY := winY + 52 * scale
       Click dotMenuX, dotMenuY
       Sleep ${this.delayMidLong}
 
       ; Step 2: Click \"\u5132\u5b58\u804a\u5929\" in the dropdown menu
-      ; The dropdown appears below \u22ee. \"\u5132\u5b58\u804a\u5929\" is the 8th item.
-      ; Each menu item is ~30px tall, menu starts ~10px below the \u22ee button.
+      ; Menu appears below \u22ee. \"\u5132\u5b58\u804a\u5929\" is the 8th item.
+      ; Each menu item ~30px tall, menu starts ~15px below \u22ee.
       menuX := dotMenuX - 50 * scale
-      menuY := dotMenuY + 10 * scale + 7.5 * 30 * scale
+      menuY := dotMenuY + 15 * scale + 7.5 * 30 * scale
       Click menuX, menuY
       Sleep ${this.delayLong}
 
@@ -450,12 +430,12 @@ ${script}
           WinWait("Save As",, 3)
           dialogTitle := "Save As"
         } catch {
-          FileAppend "ERROR: Save dialog did not appear. Menu click may have missed.", "*"
+          FileAppend "ERROR: Save dialog did not appear. The \u22ee menu or \u5132\u5b58\u804a\u5929 click may have missed.", "*"
           ExitApp
         }
       }
 
-      ; Activate the dialog using its title (not bare WinActivate)
+      ; Activate the dialog using its title explicitly
       WinActivate dialogTitle
       WinWaitActive dialogTitle,, 3
       Sleep ${this.delayShort}
