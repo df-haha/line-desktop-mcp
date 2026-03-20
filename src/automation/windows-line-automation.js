@@ -409,8 +409,7 @@ ${script}
   /**
    * Save chat history using LINE Desktop's native export via the \u22ee (three-dot) menu.
    * Flow: Click \u22ee at top-right \u2192 click \"\u5132\u5b58\u804a\u5929\" \u2192 handle Save As dialog with keyboard.
-   * Coordinates are relative to window edges and \u22ee button position, so they work across window sizes.
-   * DPI scaling is handled via A_ScreenDPI / 96.
+   * Coordinates are relative to window edges, stable across window sizes.
    * @param {string} savePath The full file path to save the chat history to.
    * @returns {Promise<{success: boolean, path?: string, error?: string}>}
    */
@@ -420,40 +419,45 @@ ${script}
     const script = `
       SetTitleMatchMode 3
       WinActivate "${this.lineWinTitle}"
-      Sleep ${this.delayShort}
+      Sleep ${this.delayMid}
       WinGetPos &winX, &winY, &winW, &winH, "${this.lineWinTitle}"
       CoordMode "Mouse", "Screen"
       scale := A_ScreenDPI / 96
 
-      ; Step 1: Click the \u22ee (three-dot menu) button at top-right of chat header
-      ; This position is anchored to the right edge of the window — stable across window sizes
-      dotMenuX := winX + winW - 15 * scale
-      dotMenuY := winY + 50 * scale
+      ; Step 1: Click the \u22ee (three-dot menu) at top-right of chat header
+      ; Position: anchored to right edge (winW - 18), header Y ~62px from window top
+      dotMenuX := winX + winW - 18 * scale
+      dotMenuY := winY + 62 * scale
       Click dotMenuX, dotMenuY
       Sleep ${this.delayMidLong}
 
       ; Step 2: Click \"\u5132\u5b58\u804a\u5929\" in the dropdown menu
-      ; Menu items use relative offset from the \u22ee button click position
-      ; \"\u5132\u5b58\u804a\u5929\" is the 8th item; each item is ~28px, menu starts ~20px below \u22ee
-      menuX := dotMenuX - 45 * scale
-      menuY := dotMenuY + 20 * scale + 7.5 * 28 * scale
+      ; The dropdown appears below \u22ee. \"\u5132\u5b58\u804a\u5929\" is the 8th item.
+      ; Each menu item is ~30px tall, menu starts ~10px below the \u22ee button.
+      menuX := dotMenuX - 50 * scale
+      menuY := dotMenuY + 10 * scale + 7.5 * 30 * scale
       Click menuX, menuY
       Sleep ${this.delayLong}
 
-      ; Step 3: Handle the Save As dialog — entirely keyboard-driven, no coordinates
+      ; Step 3: Handle the Save As dialog \u2014 entirely keyboard-driven
       SetTitleMatchMode 2
+      dialogTitle := ""
       try {
         WinWait("\u53e6\u5b58\u65b0\u6a94",, 8)
+        dialogTitle := "\u53e6\u5b58\u65b0\u6a94"
       } catch {
         try {
           WinWait("Save As",, 3)
+          dialogTitle := "Save As"
         } catch {
-          FileAppend "ERROR: Save dialog did not appear", "*"
+          FileAppend "ERROR: Save dialog did not appear. Menu click may have missed.", "*"
           ExitApp
         }
       }
 
-      WinActivate
+      ; Activate the dialog using its title (not bare WinActivate)
+      WinActivate dialogTitle
+      WinWaitActive dialogTitle,, 3
       Sleep ${this.delayShort}
 
       ; Focus filename field (Alt+N) and set the save path
